@@ -129,6 +129,7 @@ build = { features = ["build"], no-default-feature = true }
 test = { features = ["test"], solve-group = "default" }
 test-all = { features = ["test-all"], solve-group = "default" }
 typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+typecheck-py313 = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
 numpy = { features = ["numpy"], solve-group = "default" }
 codspeed = { features = ["codspeed"], solve-group = "default" }
 docs = { features = [
@@ -222,7 +223,7 @@ python = "3.14.*"
 include = ["pint"]
 exclude = ["pint/testsuite"]
 pythonVersion = "3.12"
-typeCheckingMode = "basic"
+strict = ["src/units/core.py"]
 
 [tool.pyright.defineConstant]
 HAS_BABEL = true
