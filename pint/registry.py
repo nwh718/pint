@@ -14,7 +14,7 @@ need.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from . import facets, registry_helpers
 from .compat import TypeAlias
@@ -151,37 +151,26 @@ class UnitRegistry[MagnitudeT: Magnitude](
             cache_folder=cache_folder,
         )
 
-    def pi_theorem(self, quantities):
-        """Builds dimensionless quantities using the Buckingham π theorem
+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
+        normalized_alias = alias.casefold()
 
-        Parameters
-        ----------
-        quantities : dict
-            mapping between variable name and units
+        for unit_name, unit_definition in self._units.items():
+            aliases = getattr(unit_definition, "_aliases", None)
+            if aliases is None:
+                aliases = tuple(
+                    candidate
+                    for candidate in (
+                        getattr(unit_definition, "symbol", None),
+                        *getattr(unit_definition, "aliases", ()),
+                    )
+                    if candidate
+                )
 
-        Returns
-        -------
-        list
-            a list of dimensionless quantities expressed as dicts
+            if any(candidate.casefold() == normalized_alias for candidate in aliases):
+                return self.Unit(unit_definition.name or unit_name)
 
-        """
-        return pi_theorem(quantities, self)
-
-    def setup_matplotlib(self, enable: bool = True) -> None:
-        """Set up handlers for matplotlib's unit support.
-
-        Parameters
-        ----------
-        enable : bool
-            whether support should be enabled or disabled (Default value = True)
-
-        """
-        # Delays importing matplotlib until it's actually requested
-        from .matplotlib import setup_matplotlib_handlers
-
-        setup_matplotlib_handlers(self, enable)
-
-    wraps = registry_helpers.wraps
+        logger.warning("Unit alias %r was not found in the registry.", alias)
+        return None
 
     check = registry_helpers.check
 
