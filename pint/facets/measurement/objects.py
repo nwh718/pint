@@ -93,9 +93,9 @@ class Measurement(PlainQuantity):
 
     def __reduce__(self):
         # See notes in Quantity.__reduce__
-        from pint import _unpickle_measurement
+        from pint import _unpickle
 
-        return _unpickle_measurement, (Measurement, self.magnitude, self._units)
+        return _unpickle, (Measurement, self.magnitude, self._units)
 
     def __repr__(self):
         return f'Measurement({repr(self.magnitude.nominal_value)}, {repr(self.magnitude.std_dev)}, "{self.units}")'

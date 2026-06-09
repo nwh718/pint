@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
-from .delegates.formatter._format_helpers import formatter
 from .errors import (  # noqa: F401
     DefinitionSyntaxError,
     DimensionalityError,
@@ -45,7 +44,6 @@ except Exception:  # pragma: no cover
     # so the reported version will be unknown
     __version__ = "unknown"
 
-
 #: A Registry with the default units and constants.
 _DEFAULT_REGISTRY = LazyRegistry()
 
@@ -55,44 +53,24 @@ application_registry = ApplicationRegistry(_DEFAULT_REGISTRY)
 
 def _unpickle(cls, *args):
     """Rebuild object upon unpickling.
-    All units must exist in the application registry.
 
     Parameters
     ----------
-    cls : Quantity, Magnitude, or Unit
-    *args
+    cls : Quantity, Unit, or Measurement
+    *args : tuple
+        Arguments to pass to the cls constructor.
+        All units must exist in the application registry.
 
     Returns
     -------
     object of type cls
-
     """
-    from pint.util import UnitsContainer
-
-    for arg in args:
-        # Prefixed units are defined within the registry
-        # on parsing (which does not happen here).
-        # We need to make sure that this happens before using.
-        if isinstance(arg, UnitsContainer):
-            for name in arg:
-                application_registry.parse_units(name)
+    # Prefixed units are defined within the registry
+    # on parsing (which does not happen here).
+    # We need to make sure that this happens before using.
+    application_registry.get()
 
     return cls(*args)
-
-
-def _unpickle_quantity(cls, *args):
-    """Rebuild quantity upon unpickling using the application registry."""
-    return _unpickle(application_registry.Quantity, *args)
-
-
-def _unpickle_unit(cls, *args):
-    """Rebuild unit upon unpickling using the application registry."""
-    return _unpickle(application_registry.Unit, *args)
-
-
-def _unpickle_measurement(cls, *args):
-    """Rebuild measurement upon unpickling using the application registry."""
-    return _unpickle(application_registry.Measurement, *args)
 
 
 def set_application_registry(registry):
@@ -127,6 +105,7 @@ __all__ = (
     "Unit",
     "UnitRegistry",
     "PintError",
+    "formatter",
     "DefinitionSyntaxError",
     "LogarithmicUnitCalculusError",
     "DimensionalityError",
