@@ -22,8 +22,6 @@ jobs:
           activate-environment: true
       - uses: jakebailey/pyright-action@v2
         continue-on-error: true
-        with:
-          version: PATH
 
   test-linux:
     runs-on: ubuntu-latest
@@ -107,7 +105,7 @@ jobs:
           log-level: vvv
       - name: Install numpy
         if: ${{ matrix.numpy != null }}
-        run: pip install "${{matrix.numpy}}"
+        run: pixi run --environment ${{ matrix.environment }} pip install "${{matrix.numpy}}"
       - run: pixi run --environment ${{ matrix.environment }} test
 
   test-macos:
@@ -127,7 +125,7 @@ jobs:
           log-level: vvv
       - name: Install numpy
         if: ${{ matrix.numpy != null }}
-        run: pip install "${{matrix.numpy}}"
+        run: pixi run --environment ${{ matrix.environment }} pip install "${{matrix.numpy}}"
       - run: pixi run --environment ${{ matrix.environment }} test
 
   publish:
