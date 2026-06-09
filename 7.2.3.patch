@@ -1,0 +1,141 @@
+diff --git a/pint/__init__.py b/pint/__init__.py
+index a954828..097f845 100644
+--- a/pint/__init__.py
++++ b/pint/__init__.py
+@@ -45,7 +45,6 @@ except Exception:  # pragma: no cover
+     # so the reported version will be unknown
+     __version__ = "unknown"
+ 
+-
+ #: A Registry with the default units and constants.
+ _DEFAULT_REGISTRY = LazyRegistry()
+ 
+@@ -53,49 +52,34 @@ _DEFAULT_REGISTRY = LazyRegistry()
+ application_registry = ApplicationRegistry(_DEFAULT_REGISTRY)
+ 
+ 
+-def _unpickle(cls, *args):
++def _unpickle(cls: type, *args) -> object:
+     """Rebuild object upon unpickling.
+-    All units must exist in the application registry.
+ 
+     Parameters
+     ----------
+-    cls : Quantity, Magnitude, or Unit
++    cls : type
++        The class of the object to unpickle.
+     *args
++        Arguments passed to the class constructor.
+ 
+     Returns
+     -------
+-    object of type cls
+-
++    object
++        The rebuilt object.
+     """
+-    from pint.util import UnitsContainer
+-
+-    for arg in args:
+-        # Prefixed units are defined within the registry
+-        # on parsing (which does not happen here).
+-        # We need to make sure that this happens before using.
+-        if isinstance(arg, UnitsContainer):
+-            for name in arg:
+-                application_registry.parse_units(name)
+-
++    for name in ("Quantity", "Unit", "Measurement"):
++        if name in cls.__name__:
++            return getattr(application_registry, name)(*args)
+     return cls(*args)
+ 
+ 
+-def _unpickle_quantity(cls, *args):
+-    """Rebuild quantity upon unpickling using the application registry."""
+-    return _unpickle(application_registry.Quantity, *args)
+-
+-
+-def _unpickle_unit(cls, *args):
+-    """Rebuild unit upon unpickling using the application registry."""
+-    return _unpickle(application_registry.Unit, *args)
+-
+-
+-def _unpickle_measurement(cls, *args):
+-    """Rebuild measurement upon unpickling using the application registry."""
+-    return _unpickle(application_registry.Measurement, *args)
++# Keep aliases for backwards compatibility with old pickles
++_unpickle_quantity = _unpickle
++_unpickle_measurement = _unpickle
++_unpickle_unit = _unpickle
+ 
+ 
+-def set_application_registry(registry):
++def set_application_registry(registry: UnitRegistry) -> None:
+     """Set the application registry, which is used for unpickling operations
+     and when invoking pint.Quantity or pint.Unit directly.
+ 
+@@ -103,10 +87,11 @@ def set_application_registry(registry):
+     ----------
+     registry : pint.UnitRegistry
+     """
+-    application_registry.set(registry)
++    global application_registry
++    application_registry = ApplicationRegistry(registry)
+ 
+ 
+-def get_application_registry():
++def get_application_registry() -> ApplicationRegistry:
+     """Return the application registry. If :func:`set_application_registry` was never
+     invoked, return a registry built using :file:`defaults_en.txt` embedded in the pint
+     package.
+diff --git a/pint/facets/measurement/objects.py b/pint/facets/measurement/objects.py
+index ef70605..4a2ca4f 100644
+--- a/pint/facets/measurement/objects.py
++++ b/pint/facets/measurement/objects.py
+@@ -93,9 +93,9 @@ class Measurement(PlainQuantity):
+ 
+     def __reduce__(self):
+         # See notes in Quantity.__reduce__
+-        from pint import _unpickle_measurement
++        from pint import _unpickle
+ 
+-        return _unpickle_measurement, (Measurement, self.magnitude, self._units)
++        return _unpickle, (Measurement, self.magnitude, self._units)
+ 
+     def __repr__(self):
+         return f'Measurement({repr(self.magnitude.nominal_value)}, {repr(self.magnitude.std_dev)}, "{self.units}")'
+diff --git a/pint/facets/plain/quantity.py b/pint/facets/plain/quantity.py
+index d31bc5c..eefc3f1 100644
+--- a/pint/facets/plain/quantity.py
++++ b/pint/facets/plain/quantity.py
+@@ -152,12 +152,12 @@ class PlainQuantity[MagnitudeT: Magnitude](PrettyIPython, SharedRegistryObject):
+         """Allow pickling quantities. Since UnitRegistries are not pickled, upon
+         unpickling the new object is always attached to the application registry.
+         """
+-        from pint import _unpickle_quantity
++        from pint import _unpickle
+ 
+         # Note: type(self) would be a mistake as subclasses built by
+         # dinamically can't be pickled
+         # TODO: Check if this is still the case.
+-        return _unpickle_quantity, (PlainQuantity, self.magnitude, self._units)
++        return _unpickle, (PlainQuantity, self.magnitude, self._units)
+ 
+     @overload
+     def __new__(cls, value: MagnitudeT, units: UnitLike | None = None) -> Self: ...
+diff --git a/pint/facets/plain/unit.py b/pint/facets/plain/unit.py
+index 45dc065..f07c077 100644
+--- a/pint/facets/plain/unit.py
++++ b/pint/facets/plain/unit.py
+@@ -29,9 +29,9 @@ class PlainUnit(PrettyIPython, SharedRegistryObject):
+ 
+     def __reduce__(self):
+         # See notes in Quantity.__reduce__
+-        from pint import _unpickle_unit
++        from pint import _unpickle
+ 
+-        return _unpickle_unit, (PlainUnit, self._units)
++        return _unpickle, (PlainUnit, self._units)
+ 
+     def __init__(self, units: UnitLike) -> None:
+         super().__init__()

@@ -29,9 +29,9 @@ class PlainUnit(PrettyIPython, SharedRegistryObject):
 
     def __reduce__(self):
         # See notes in Quantity.__reduce__
-        from pint import _unpickle_unit
+        from pint import _unpickle
 
-        return _unpickle_unit, (PlainUnit, self._units)
+        return _unpickle, (PlainUnit, self._units)
 
     def __init__(self, units: UnitLike) -> None:
         super().__init__()
