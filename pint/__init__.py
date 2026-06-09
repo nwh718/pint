@@ -80,19 +80,28 @@ def _unpickle(cls, *args):
     return cls(*args)
 
 
+def _unpickle_by_name(name: str, *args):
+    """Rebuild a pickled pint object using the application registry.
+
+    ``name`` is the attribute name under which the appropriate class lives on
+    the application registry (``"Quantity"``, ``"Unit"`` or ``"Measurement"``).
+    """
+    return _unpickle(getattr(application_registry, name), *args)
+
+
 def _unpickle_quantity(cls, *args):
     """Rebuild quantity upon unpickling using the application registry."""
-    return _unpickle(application_registry.Quantity, *args)
+    return _unpickle_by_name("Quantity", *args)
 
 
 def _unpickle_unit(cls, *args):
     """Rebuild unit upon unpickling using the application registry."""
-    return _unpickle(application_registry.Unit, *args)
+    return _unpickle_by_name("Unit", *args)
 
 
 def _unpickle_measurement(cls, *args):
     """Rebuild measurement upon unpickling using the application registry."""
-    return _unpickle(application_registry.Measurement, *args)
+    return _unpickle_by_name("Measurement", *args)
 
 
 def set_application_registry(registry):

@@ -152,12 +152,12 @@ class PlainQuantity[MagnitudeT: Magnitude](PrettyIPython, SharedRegistryObject):
         """Allow pickling quantities. Since UnitRegistries are not pickled, upon
         unpickling the new object is always attached to the application registry.
         """
-        from pint import _unpickle_quantity
+        from pint import _unpickle_by_name
 
         # Note: type(self) would be a mistake as subclasses built by
         # dinamically can't be pickled
         # TODO: Check if this is still the case.
-        return _unpickle_quantity, (PlainQuantity, self.magnitude, self._units)
+        return _unpickle_by_name, ("Quantity", self.magnitude, self._units)
 
     @overload
     def __new__(cls, value: MagnitudeT, units: UnitLike | None = None) -> Self: ...
