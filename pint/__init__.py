@@ -14,6 +14,7 @@ and conversions from and to different units.
 from __future__ import annotations
 
 from importlib.metadata import version
+from typing import Any, Literal
 
 from .delegates.formatter._format_helpers import formatter
 from .errors import (  # noqa: F401
@@ -30,8 +31,6 @@ from .formatting import register_unit_format
 from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
 from .util import logger, pi_theorem  # noqa: F401
 
-# Default Quantity, Unit and Measurement are the ones
-# build in the default registry.
 Quantity = UnitRegistry.Quantity
 Unit = UnitRegistry.Unit
 Measurement = UnitRegistry.Measurement
@@ -41,61 +40,59 @@ Group = UnitRegistry.Group
 try:  # pragma: no cover
     __version__ = version("pint")
 except Exception:  # pragma: no cover
-    # we seem to have a local copy not installed without setuptools
-    # so the reported version will be unknown
     __version__ = "unknown"
 
-
-#: A Registry with the default units and constants.
 _DEFAULT_REGISTRY = LazyRegistry()
-
-#: Registry used for unpickling operations.
 application_registry = ApplicationRegistry(_DEFAULT_REGISTRY)
 
+_UnpickleKind = Literal["Quantity", "Unit", "Measurement"]
 
-def _unpickle(cls, *args):
+
+def _unpickle(constructor: Any, *args: Any) -> Any:
     """Rebuild object upon unpickling.
     All units must exist in the application registry.
 
     Parameters
     ----------
-    cls : Quantity, Magnitude, or Unit
+    constructor
     *args
 
     Returns
     -------
-    object of type cls
+    object
 
     """
     from pint.util import UnitsContainer
 
     for arg in args:
-        # Prefixed units are defined within the registry
-        # on parsing (which does not happen here).
-        # We need to make sure that this happens before using.
         if isinstance(arg, UnitsContainer):
             for name in arg:
                 application_registry.parse_units(name)
 
-    return cls(*args)
+    return constructor(*args)
 
 
-def _unpickle_quantity(cls, *args):
-    """Rebuild quantity upon unpickling using the application registry."""
-    return _unpickle(application_registry.Quantity, *args)
+def _unpickle_application_registry(
+    kind: _UnpickleKind, _cls: Any, *args: Any
+) -> Any:
+    return _unpickle(getattr(application_registry, kind), *args)
 
 
-def _unpickle_unit(cls, *args):
-    """Rebuild unit upon unpickling using the application registry."""
-    return _unpickle(application_registry.Unit, *args)
+def _unpickle_quantity(cls: Any, *args: Any) -> Any:
+    return _unpickle_application_registry("Quantity", cls, *args)
 
 
-def _unpickle_measurement(cls, *args):
-    """Rebuild measurement upon unpickling using the application registry."""
-    return _unpickle(application_registry.Measurement, *args)
+def _unpickle_unit(cls: Any, *args: Any) -> Any:
+    return _unpickle_application_registry("Unit", cls, *args)
 
 
-def set_application_registry(registry):
+def _unpickle_measurement(cls: Any, *args: Any) -> Any:
+    return _unpickle_application_registry("Measurement", cls, *args)
+
+
+def set_application_registry(
+    registry: ApplicationRegistry | LazyRegistry | UnitRegistry,
+) -> None:
     """Set the application registry, which is used for unpickling operations
     and when invoking pint.Quantity or pint.Unit directly.
 
@@ -106,7 +103,7 @@ def set_application_registry(registry):
     application_registry.set(registry)
 
 
-def get_application_registry():
+def get_application_registry() -> ApplicationRegistry:
     """Return the application registry. If :func:`set_application_registry` was never
     invoked, return a registry built using :file:`defaults_en.txt` embedded in the pint
     package.
@@ -118,9 +115,6 @@ def get_application_registry():
     return application_registry
 
 
-# Enumerate all user-facing objects
-# Hint to intersphinx that, when building objects.inv, these objects must be registered
-# under the top-level module and not in their original submodules
 __all__ = (
     "Measurement",
     "Quantity",
