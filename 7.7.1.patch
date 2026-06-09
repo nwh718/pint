@@ -1,0 +1,29 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 000d633..031bc42 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -20,7 +20,11 @@ jobs:
+         with:
+           environments: typecheck
+           activate-environment: true
+-      - uses: jakebailey/pyright-action@v2
++        continue-on-error: true
++        with:
++          version: PATH
++        with:
++          version: PATH
+         continue-on-error: true
+         with:
+           version: PATH
+diff --git a/pyproject.toml b/pyproject.toml
+index 42fd0f2..3456f0c 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -222,7 +222,6 @@ python = "3.14.*"
+ include = ["pint"]
+ exclude = ["pint/testsuite"]
+ pythonVersion = "3.12"
+-typeCheckingMode = "basic"
+ 
+ [tool.pyright.defineConstant]
+ HAS_BABEL = true

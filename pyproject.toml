@@ -222,7 +222,6 @@ python = "3.14.*"
 include = ["pint"]
 exclude = ["pint/testsuite"]
 pythonVersion = "3.12"
-typeCheckingMode = "basic"
 
 [tool.pyright.defineConstant]
 HAS_BABEL = true
