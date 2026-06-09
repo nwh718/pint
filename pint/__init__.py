@@ -13,6 +13,7 @@ and conversions from and to different units.
 
 from __future__ import annotations
 
+import functools
 from importlib.metadata import version
 
 from .delegates.formatter._format_helpers import formatter
@@ -41,10 +42,7 @@ Group = UnitRegistry.Group
 try:  # pragma: no cover
     __version__ = version("pint")
 except Exception:  # pragma: no cover
-    # we seem to have a local copy not installed without setuptools
-    # so the reported version will be unknown
     __version__ = "unknown"
-
 
 #: A Registry with the default units and constants.
 _DEFAULT_REGISTRY = LazyRegistry()
@@ -60,39 +58,26 @@ def _unpickle(cls, *args):
     Parameters
     ----------
     cls : Quantity, Magnitude, or Unit
-    *args
 
     Returns
     -------
     object of type cls
-
     """
     from pint.util import UnitsContainer
 
+    # Prefixed units are defined within the registry
+    # on parsing (which does not happen here).
+    # We need to make sure that this happens before using.
     for arg in args:
-        # Prefixed units are defined within the registry
-        # on parsing (which does not happen here).
-        # We need to make sure that this happens before using.
         if isinstance(arg, UnitsContainer):
-            for name in arg:
-                application_registry.parse_units(name)
+            arg in application_registry._registry._units
 
-    return cls(*args)
-
-
-def _unpickle_quantity(cls, *args):
-    """Rebuild quantity upon unpickling using the application registry."""
-    return _unpickle(application_registry.Quantity, *args)
+    return cls(*args[1:])
 
 
-def _unpickle_unit(cls, *args):
-    """Rebuild unit upon unpickling using the application registry."""
-    return _unpickle(application_registry.Unit, *args)
-
-
-def _unpickle_measurement(cls, *args):
-    """Rebuild measurement upon unpickling using the application registry."""
-    return _unpickle(application_registry.Measurement, *args)
+_unpickle_quantity = functools.partial(_unpickle, application_registry.Quantity)
+_unpickle_unit = functools.partial(_unpickle, application_registry.Unit)
+_unpickle_measurement = functools.partial(_unpickle, application_registry.Measurement)
 
 
 def set_application_registry(registry):
