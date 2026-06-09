@@ -1,0 +1,42 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -20,6 +20,7 @@
+       matrix:
+         environment:
+           - test-py312
+           - test-py313
++          - test-py314
+         numpy: [null, "numpy>=2.0.0,<2.1.0", "numpy>=2.4.0"]
+         uncertainties: [null, "uncertainties==3.1.6", "uncertainties>=3.1.6,<4.0.0"]
+         extras: [null]
+@@ -77,6 +78,7 @@
+       matrix:
+         environment:
+           - test-py312
+           - test-py313
++          - test-py314
+         numpy: [null, "numpy>=2.0.0,<2.1.0", "numpy>=2.4.0"]
+     steps:
+       - uses: actions/checkout@v6.0.2
+@@ -95,6 +97,7 @@
+       matrix:
+         environment:
+           - test-py312
+           - test-py313
++          - test-py314
+         numpy: [null, "numpy>=2.4.0"]
+     steps:
+       - uses: actions/checkout@v6.0.2
+diff --git a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -23,6 +23,7 @@
+   "Programming Language :: Python",
+   "Topic :: Scientific/Engineering",
+   "Topic :: Software Development :: Libraries",
+   "Programming Language :: Python :: 3.12",
+   "Programming Language :: Python :: 3.13",
++  "Programming Language :: Python :: 3.14",
+ ]
+ requires-python = ">=3.12"
