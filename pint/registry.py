@@ -151,6 +151,30 @@ class UnitRegistry[MagnitudeT: Magnitude](
             cache_folder=cache_folder,
         )
 
+    def get_unit_by_alias(self, alias: str) -> Unit | None:
+        """Look up a unit by its alias.
+
+        Parameters
+        ----------
+        alias : str
+            Alias name of the unit, e.g. 'kg'.
+
+        Returns
+        -------
+        Unit or None
+            The matching unit object, or None if not found.
+        """
+        alias_lower = alias.strip().lower()
+        seen_ids: set[int] = set()
+        for definition in self._units.values():
+            if id(definition) in seen_ids:
+                continue
+            seen_ids.add(id(definition))
+            if alias_lower in (a.lower() for a in definition.aliases):
+                return self.Unit(definition.name)
+        logger.warning(f"Alias {alias!r} not found in registry.")
+        return None
+
     def pi_theorem(self, quantities):
         """Builds dimensionless quantities using the Buckingham π theorem
 
@@ -158,22 +182,6 @@ class UnitRegistry[MagnitudeT: Magnitude](
         ----------
         quantities : dict
             mapping between variable name and units
-
-        Returns
-        -------
-        list
-            a list of dimensionless quantities expressed as dicts
-
-        """
-        return pi_theorem(quantities, self)
-
-    def setup_matplotlib(self, enable: bool = True) -> None:
-        """Set up handlers for matplotlib's unit support.
-
-        Parameters
-        ----------
-        enable : bool
-            whether support should be enabled or disabled (Default value = True)
 
         """
         # Delays importing matplotlib until it's actually requested
