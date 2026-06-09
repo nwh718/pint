@@ -14,7 +14,7 @@ need.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from . import facets, registry_helpers
 from .compat import TypeAlias
@@ -150,6 +150,38 @@ class UnitRegistry[MagnitudeT: Magnitude](
             case_sensitive=case_sensitive,
             cache_folder=cache_folder,
         )
+
+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
+        """Find a unit object by its alias (case-insensitive).
+
+        For example, 'kg' maps to the 'kilogram' unit. The search iterates
+        over all registered units and matches against each unit's set of
+        aliases. Matching is performed on lowercase strings so that lookups
+        like 'KG' still resolve to 'kilogram'.
+
+        Parameters
+        ----------
+        alias :
+            The alias string to look up (e.g. 'kg', 'Hz').
+
+        Returns
+        -------
+        Optional[Unit]
+            The :class:`Unit` associated with the alias if found, otherwise
+            ``None``. A warning is logged when no match is found.
+        """
+        normalized = alias.lower()
+        for canonical_name in self._units:
+            unit_obj = self.Unit(canonical_name)
+            unit_aliases = getattr(unit_obj, "_aliases", None) or ()
+            for a in unit_aliases:
+                if a.lower() == normalized:
+                    return unit_obj
+            if canonical_name.lower() == normalized:
+                return unit_obj
+
+        logger.warning("No unit found with alias: %r", alias)
+        return None
 
     def pi_theorem(self, quantities):
         """Builds dimensionless quantities using the Buckingham π theorem
