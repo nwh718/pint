@@ -1,0 +1,13 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 2a4d70d3..c62b3746 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -137,7 +137,7 @@ test-py314-all = ["all", "test", "py314"]
+ 
+ [tool.pixi.environments]
+ dev = { features = ["numpy", "dev", "py313"], solve-group = "default" }
+-typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
++typecheck = { features = ["typecheck", "test-all", "py312"], solve-group = "default" }
+ lint = { features = ["lint"], no-default-feature = true }
+ build = { features = ["build"], no-default-feature = true }
+ test = { features = ["test"], solve-group = "default" }
