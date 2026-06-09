@@ -219,10 +219,11 @@ python = "3.13.*"
 python = "3.14.*"
 
 [tool.pyright]
-include = ["pint"]
+include = ["pint", "src"]
 exclude = ["pint/testsuite"]
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 typeCheckingMode = "basic"
+strict = ["src/units/core.py"]
 
 [tool.pyright.defineConstant]
 HAS_BABEL = true

@@ -20,10 +20,15 @@ jobs:
         with:
           environments: typecheck
           activate-environment: true
+      - name: Verify Python 3.13
+        run: |
+          python --version
+          python -c "import sys; assert sys.version_info[:2] == (3, 13), f'Expected Python 3.13, got {sys.version}'"
       - uses: jakebailey/pyright-action@v2
         continue-on-error: true
         with:
           version: PATH
+          python-version: "3.13"
 
   test-linux:
     runs-on: ubuntu-latest
