@@ -1,0 +1,55 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 000d633..1aecb5a 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -20,15 +20,11 @@ jobs:
+         with:
+           environments: typecheck
+           activate-environment: true
+-      - uses: jakebailey/pyright-action@v2
+-        continue-on-error: true
+-        with:
+-          version: PATH
++      - run: pixi run --environment typecheck typecheck
+ 
+   test-linux:
+     runs-on: ubuntu-latest
+     strategy:
+-      matrix:
+         environment:
+           - test-py312
+           - test-py313
+@@ -132,7 +128,7 @@ jobs:
+ 
+   publish:
+     if: github.ref_type == 'tag'
+-    needs: [test-linux, test-windows, test-macos, lint]
++    needs: [test-linux, test-windows, test-macos, lint, typecheck]
+ 
+     runs-on: ubuntu-latest
+     environment:
+diff --git a/pyproject.toml b/pyproject.toml
+index 42fd0f2..76e4c10 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
+ build = { features = ["build"], no-default-feature = true }
+ test = { features = ["test"], solve-group = "default" }
+ test-all = { features = ["test-all"], solve-group = "default" }
+-typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
++typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
+ numpy = { features = ["numpy"], solve-group = "default" }
+ codspeed = { features = ["codspeed"], solve-group = "default" }
+ docs = { features = [
+@@ -221,9 +221,9 @@ python = "3.14.*"
+ [tool.pyright]
+ include = ["pint"]
+ exclude = ["pint/testsuite"]
+-pythonVersion = "3.12"
++pythonVersion = "3.13"
++strict = ["src/units/core.py"]
+ typeCheckingMode = "basic"
+-
+ [tool.pyright.defineConstant]
+ HAS_BABEL = true
+ HAS_UNCERTAINTIES = true
