@@ -20,10 +20,7 @@ jobs:
         with:
           environments: typecheck
           activate-environment: true
-      - uses: jakebailey/pyright-action@v2
-        continue-on-error: true
-        with:
-          version: PATH
+      - run: pixi run --environment typecheck typecheck
 
   test-linux:
     runs-on: ubuntu-latest

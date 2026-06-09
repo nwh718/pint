@@ -1,0 +1,40 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 000d633..615bda5 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -20,10 +20,7 @@ jobs:
+         with:
+           environments: typecheck
+           activate-environment: true
+-      - uses: jakebailey/pyright-action@v2
+-        continue-on-error: true
+-        with:
+-          version: PATH
++      - run: pixi run --environment typecheck typecheck
+ 
+   test-linux:
+     runs-on: ubuntu-latest
+diff --git a/pyproject.toml b/pyproject.toml
+index 42fd0f2..447d5eb 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
+ build = { features = ["build"], no-default-feature = true }
+ test = { features = ["test"], solve-group = "default" }
+ test-all = { features = ["test-all"], solve-group = "default" }
+-typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
++typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
+ numpy = { features = ["numpy"], solve-group = "default" }
+ codspeed = { features = ["codspeed"], solve-group = "default" }
+ docs = { features = [
+@@ -221,8 +221,8 @@ python = "3.14.*"
+ [tool.pyright]
+ include = ["pint"]
+ exclude = ["pint/testsuite"]
+-pythonVersion = "3.12"
+-typeCheckingMode = "basic"
++strict = ["src/units/core.py"]
++pythonVersion = "3.13"
+ 
+ [tool.pyright.defineConstant]
+ HAS_BABEL = true
