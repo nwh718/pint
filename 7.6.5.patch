@@ -1,0 +1,36 @@
+diff --git a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -105,7 +105,7 @@ build = { features = ["build"], no-default-feature = true }
+ test = { features = ["test"], solve-group = "default" }
+ test-all = { features = ["test-all"], solve-group = "default" }
+-typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
++typecheck = { features = ["typecheck", "test-all", "py312"], solve-group = "default" }
+ numpy = { features = ["numpy"], solve-group = "default" }
+ codspeed = { features = ["codspeed"], solve-group = "default" }
+ docs = { features = [
+@@ -118,8 +118,12 @@ test-py314-all = ["all", "test", "py314"]
+ 
+ [tool.pixi.feature.typecheck.dependencies]
+-pyright = "*"
+-pip = "*"
++# Pin pyright version for reproducible type checking
++pyright = ">=1.1.390,<2.0.0"
++pip = "*"
++# Use Python 3.12 to match pyright's pythonVersion setting
++python = "3.12.*"
+ 
+ [tool.pixi.feature.typecheck.tasks]
+-typecheck = "pyright"
++# Run typecheck with explicit Python version
++typecheck = "python -m pyright"
+ 
+@@ -147,7 +151,7 @@ doctest = "sphinx-build -a -j auto -b doctest -d build/doctrees docs build/doct
+ [tool.pyright]
+ include = ["pint"]
+ exclude = ["pint/testsuite"]
+-pythonVersion = "3.12"
++pythonVersion = "3.12"  # Keep in sync with typecheck environment Python version
+ typeCheckingMode = "basic"
+ 
+ [tool.pyright.defineConstant]
