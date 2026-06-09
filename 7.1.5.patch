@@ -1,0 +1,60 @@
+diff --git a/pint/registry.py b/pint/registry.py
+index 175836d..307ba23 100644
+--- a/pint/registry.py
++++ b/pint/registry.py
+@@ -14,7 +14,7 @@ need.
+ 
+ from __future__ import annotations
+ 
+-from typing import TYPE_CHECKING
++from typing import TYPE_CHECKING, Optional
+ 
+ from . import facets, registry_helpers
+ from .compat import TypeAlias
+@@ -151,36 +151,22 @@ class UnitRegistry[MagnitudeT: Magnitude](
+             cache_folder=cache_folder,
+         )
+ 
+-    def pi_theorem(self, quantities):
+-        """Builds dimensionless quantities using the Buckingham π theorem
+-
+-        Parameters
+-        ----------
+-        quantities : dict
+-            mapping between variable name and units
+-
+-        Returns
+-        -------
+-        list
+-            a list of dimensionless quantities expressed as dicts
+-
+-        """
+-        return pi_theorem(quantities, self)
+-
+-    def setup_matplotlib(self, enable: bool = True) -> None:
+-        """Set up handlers for matplotlib's unit support.
+-
+-        Parameters
+-        ----------
+-        enable : bool
+-            whether support should be enabled or disabled (Default value = True)
+-
+         """
+         # Delays importing matplotlib until it's actually requested
+         from .matplotlib import setup_matplotlib_handlers
+ 
+         setup_matplotlib_handlers(self, enable)
+ 
++    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
++        alias_lower = alias.lower()
++        for unit_name, unit_def in self._units.items():
++            if any(
++                a.lower() == alias_lower for a in getattr(unit_def, "aliases", ())
++            ):
++                return self.Unit(unit_name)
++        logger.warning("No unit found for alias '%s'.", alias)
++        return None
++
+     wraps = registry_helpers.wraps
+ 
+     check = registry_helpers.check
