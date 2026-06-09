@@ -156,16 +156,6 @@ class UnitRegistry[MagnitudeT: Magnitude](
 
         Parameters
         ----------
-        quantities : dict
-            mapping between variable name and units
-
-        Returns
-        -------
-        list
-            a list of dimensionless quantities expressed as dicts
-
-        """
-        return pi_theorem(quantities, self)
 
     def setup_matplotlib(self, enable: bool = True) -> None:
         """Set up handlers for matplotlib's unit support.
