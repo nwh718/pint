@@ -1,36 +1,129 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 000d633..7e5329d 100644
---- a/.github/workflows/ci.yml
-+++ b/.github/workflows/ci.yml
-@@ -20,6 +20,8 @@ jobs:
-         with:
-           environments: typecheck
-           activate-environment: true
-+          version: PATH
-+        continue-on-error: true
-       - uses: jakebailey/pyright-action@v2
-         continue-on-error: true
-         with:
+-index 000d633..7e5329d 100644
+---- a/.github/workflows/ci.yml
+-+++ b/.github/workflows/ci.yml
+-@@ -20,6 +20,8 @@ jobs:
+-         with:
+-           environments: typecheck
+-           activate-environment: true
+-+          version: PATH
+-+        continue-on-error: true
+-       - uses: jakebailey/pyright-action@v2
+-         continue-on-error: true
+-         with:
+-diff --git a/pyproject.toml b/pyproject.toml
+-index 42fd0f2..68b7d4b 100644
+---- a/pyproject.toml
+-+++ b/pyproject.toml
+-@@ -128,8 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
+- build = { features = ["build"], no-default-feature = true }
+- test = { features = ["test"], solve-group = "default" }
+- test-all = { features = ["test-all"], solve-group = "default" }
+--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+--numpy = { features = ["numpy"], solve-group = "default" }
+-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
+- codspeed = { features = ["codspeed"], solve-group = "default" }
+- docs = { features = [
+-   "docs",
+-@@ -223,7 +222,7 @@ include = ["pint"]
+- exclude = ["pint/testsuite"]
+- pythonVersion = "3.12"
+- typeCheckingMode = "basic"
+--
+-+strict = ["src/units/core.py"]
+- [tool.pyright.defineConstant]
+- HAS_BABEL = true
+- HAS_UNCERTAINTIES = true
+diff --git a/pint/__init__.py b/pint/__init__.py
+index a954828..b3bf6c8 100644
+--- a/pint/__init__.py
++++ b/pint/__init__.py
+@@ -13,24 +13,22 @@ and conversions from and to different units.
+ 
+ from __future__ import annotations
+ 
++import sys
++
+ from importlib.metadata import version
+ 
+-from .delegates.formatter._format_helpers import formatter
+-from .errors import (  # noqa: F401
+-    DefinitionSyntaxError,
+-    DimensionalityError,
+-    LogarithmicUnitCalculusError,
+-    OffsetUnitCalculusError,
+-    PintError,
+-    RedefinitionError,
+-    UndefinedUnitError,
+-    UnitStrippedWarning,
+-)
+-from .formatting import register_unit_format
+-from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
+-from .util import logger, pi_theorem  # noqa: F401
++from pint.errors import PythonVersionError
++
++_SUPPORTED_VERSIONS = frozenset({(3, 12), (3, 13), (3, 14)})
++_CURRENT_VERSION = (sys.version_info.major, sys.version_info.minor)
++
++if _CURRENT_VERSION not in _SUPPORTED_VERSIONS:
++    _supported_str = ", ".join(f"{m}.{n}" for m, n in sorted(_SUPPORTED_VERSIONS))
++    raise PythonVersionError(
++        f"pint does not support Python {_CURRENT_VERSION[0]}.{_CURRENT_VERSION[1]}. "
++        f"Supported versions: {_supported_str}"
++    )
+ 
+-# Default Quantity, Unit and Measurement are the ones
+ # build in the default registry.
+ Quantity = UnitRegistry.Quantity
+ Unit = UnitRegistry.Unit
+@@ -127,6 +125,7 @@ __all__ = (
+     "Unit",
+     "UnitRegistry",
+     "PintError",
++    "PythonVersionError",
+     "DefinitionSyntaxError",
+     "LogarithmicUnitCalculusError",
+     "DimensionalityError",
+diff --git a/pint/errors.py b/pint/errors.py
+index d150e30..e23e949 100644
+--- a/pint/errors.py
++++ b/pint/errors.py
+@@ -87,10 +87,22 @@ class PintError(Exception):
+     """Base exception for all Pint errors."""
+ 
+ 
+-class DefinitionError(ValueError, PintError):
+-    """Raised when a definition is not properly constructed."""
++class PythonVersionError(PintError, RuntimeError):
++    """Raised when the current Python version is not supported by pint."""
+ 
+-    name: str
++    msg: str
++
++    def __init__(self, msg: str):
++        self.msg = msg
++
++    def __str__(self):
++        return self.msg
++
++    def __reduce__(self):
++        return self.__class__, (self.msg,)
++
++
++class DefinitionError(ValueError, PintError):
+     definition_type: type
+     msg: str
+ 
 diff --git a/pyproject.toml b/pyproject.toml
-index 42fd0f2..68b7d4b 100644
+index 68b7d4b..4f7f844 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -128,8 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
- build = { features = ["build"], no-default-feature = true }
- test = { features = ["test"], solve-group = "default" }
- test-all = { features = ["test-all"], solve-group = "default" }
--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
--numpy = { features = ["numpy"], solve-group = "default" }
-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
- codspeed = { features = ["codspeed"], solve-group = "default" }
- docs = { features = [
-   "docs",
-@@ -223,7 +222,7 @@ include = ["pint"]
- exclude = ["pint/testsuite"]
- pythonVersion = "3.12"
- typeCheckingMode = "basic"
--
-+strict = ["src/units/core.py"]
- [tool.pyright.defineConstant]
- HAS_BABEL = true
- HAS_UNCERTAINTIES = true
+@@ -24,7 +24,7 @@ classifiers = [
+   "Programming Language :: Python :: 3.13",
+   "Programming Language :: Python :: 3.14",
+ ]
+-requires-python = ">=3.12"
++requires-python = ">=3.12,<3.15"
+ keywords = ["physical", "quantities", "unit", "conversion", "science"]
+ dependencies = [
+   "platformdirs>=2.1.0",

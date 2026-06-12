@@ -13,24 +13,22 @@ and conversions from and to different units.
 
 from __future__ import annotations
 
+import sys
+
 from importlib.metadata import version
 
-from .delegates.formatter._format_helpers import formatter
-from .errors import (  # noqa: F401
-    DefinitionSyntaxError,
-    DimensionalityError,
-    LogarithmicUnitCalculusError,
-    OffsetUnitCalculusError,
-    PintError,
-    RedefinitionError,
-    UndefinedUnitError,
-    UnitStrippedWarning,
-)
-from .formatting import register_unit_format
-from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
-from .util import logger, pi_theorem  # noqa: F401
+from pint.errors import PythonVersionError
 
-# Default Quantity, Unit and Measurement are the ones
+_SUPPORTED_VERSIONS = frozenset({(3, 12), (3, 13), (3, 14)})
+_CURRENT_VERSION = (sys.version_info.major, sys.version_info.minor)
+
+if _CURRENT_VERSION not in _SUPPORTED_VERSIONS:
+    _supported_str = ", ".join(f"{m}.{n}" for m, n in sorted(_SUPPORTED_VERSIONS))
+    raise PythonVersionError(
+        f"pint does not support Python {_CURRENT_VERSION[0]}.{_CURRENT_VERSION[1]}. "
+        f"Supported versions: {_supported_str}"
+    )
+
 # build in the default registry.
 Quantity = UnitRegistry.Quantity
 Unit = UnitRegistry.Unit
@@ -127,6 +125,7 @@ __all__ = (
     "Unit",
     "UnitRegistry",
     "PintError",
+    "PythonVersionError",
     "DefinitionSyntaxError",
     "LogarithmicUnitCalculusError",
     "DimensionalityError",

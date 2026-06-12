@@ -87,10 +87,22 @@ class PintError(Exception):
     """Base exception for all Pint errors."""
 
 
-class DefinitionError(ValueError, PintError):
-    """Raised when a definition is not properly constructed."""
+class PythonVersionError(PintError, RuntimeError):
+    """Raised when the current Python version is not supported by pint."""
 
-    name: str
+    msg: str
+
+    def __init__(self, msg: str):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
+    def __reduce__(self):
+        return self.__class__, (self.msg,)
+
+
+class DefinitionError(ValueError, PintError):
     definition_type: type
     msg: str
 
