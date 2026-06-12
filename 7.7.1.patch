@@ -1,29 +1,95 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 000d633..031bc42 100644
---- a/.github/workflows/ci.yml
-+++ b/.github/workflows/ci.yml
-@@ -20,7 +20,11 @@ jobs:
-         with:
-           environments: typecheck
-           activate-environment: true
--      - uses: jakebailey/pyright-action@v2
-+        continue-on-error: true
-+        with:
-+          version: PATH
-+        with:
-+          version: PATH
-         continue-on-error: true
-         with:
-           version: PATH
-diff --git a/pyproject.toml b/pyproject.toml
-index 42fd0f2..3456f0c 100644
---- a/pyproject.toml
-+++ b/pyproject.toml
-@@ -222,7 +222,6 @@ python = "3.14.*"
- include = ["pint"]
- exclude = ["pint/testsuite"]
- pythonVersion = "3.12"
--typeCheckingMode = "basic"
+-index 000d633..031bc42 100644
+---- a/.github/workflows/ci.yml
+-+++ b/.github/workflows/ci.yml
+-@@ -20,7 +20,11 @@ jobs:
+-         with:
+-           environments: typecheck
+-           activate-environment: true
+--      - uses: jakebailey/pyright-action@v2
+-+        continue-on-error: true
+-+        with:
+-+          version: PATH
+-+        with:
+-+          version: PATH
+-         continue-on-error: true
+-         with:
+-           version: PATH
+-diff --git a/pyproject.toml b/pyproject.toml
+-index 42fd0f2..3456f0c 100644
+---- a/pyproject.toml
+-+++ b/pyproject.toml
+-@@ -222,7 +222,6 @@ python = "3.14.*"
+- include = ["pint"]
+- exclude = ["pint/testsuite"]
+- pythonVersion = "3.12"
+--typeCheckingMode = "basic"
+- 
+- [tool.pyright.defineConstant]
+- HAS_BABEL = true
+diff --git a/pint/__init__.py b/pint/__init__.py
+index a954828..b0b69ab 100644
+--- a/pint/__init__.py
++++ b/pint/__init__.py
+@@ -13,19 +13,6 @@ and conversions from and to different units.
  
- [tool.pyright.defineConstant]
- HAS_BABEL = true
+ from __future__ import annotations
+ 
+-from importlib.metadata import version
+-
+-from .delegates.formatter._format_helpers import formatter
+-from .errors import (  # noqa: F401
+-    DefinitionSyntaxError,
+-    DimensionalityError,
+-    LogarithmicUnitCalculusError,
+-    OffsetUnitCalculusError,
+-    PintError,
+-    RedefinitionError,
+-    UndefinedUnitError,
+-    UnitStrippedWarning,
+-)
+ from .formatting import register_unit_format
+ from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
+ from .util import logger, pi_theorem  # noqa: F401
+@@ -123,7 +110,6 @@ def get_application_registry():
+ # under the top-level module and not in their original submodules
+ __all__ = (
+     "Measurement",
+-    "Quantity",
+     "Unit",
+     "UnitRegistry",
+     "PintError",
+diff --git a/pint/errors.py b/pint/errors.py
+index d150e30..cb026ad 100644
+--- a/pint/errors.py
++++ b/pint/errors.py
+@@ -87,28 +87,9 @@ class PintError(Exception):
+     """Base exception for all Pint errors."""
+ 
+ 
+-class DefinitionError(ValueError, PintError):
+-    """Raised when a definition is not properly constructed."""
+-
+-    name: str
+-    definition_type: type
+-    msg: str
+ 
+-    def __init__(self, name: str, definition_type: type, msg: str):
+-        self.name = name
+-        self.definition_type = definition_type
+-        self.msg = msg
+ 
+-    def __str__(self):
+-        msg = f"Cannot define '{self.name}' ({self.definition_type}): {self.msg}"
+-        return msg
+-
+-    def __reduce__(self):
+-        return self.__class__, (self.name, self.definition_type, self.msg)
+-
+-
+-class DefinitionSyntaxError(ValueError, PintError):
+-    """Raised when a textual definition has a syntax error."""
++class DefinitionError(ValueError, PintError):
+ 
+     msg: str
+ 

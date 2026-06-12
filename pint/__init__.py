@@ -13,19 +13,6 @@ and conversions from and to different units.
 
 from __future__ import annotations
 
-from importlib.metadata import version
-
-from .delegates.formatter._format_helpers import formatter
-from .errors import (  # noqa: F401
-    DefinitionSyntaxError,
-    DimensionalityError,
-    LogarithmicUnitCalculusError,
-    OffsetUnitCalculusError,
-    PintError,
-    RedefinitionError,
-    UndefinedUnitError,
-    UnitStrippedWarning,
-)
 from .formatting import register_unit_format
 from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
 from .util import logger, pi_theorem  # noqa: F401
@@ -123,7 +110,6 @@ def get_application_registry():
 # under the top-level module and not in their original submodules
 __all__ = (
     "Measurement",
-    "Quantity",
     "Unit",
     "UnitRegistry",
     "PintError",

@@ -1,6 +1,12 @@
 name: Test and release when tagged
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - "master"
+      - "develop"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -28,6 +34,84 @@ jobs:
         continue-on-error: true
         with:
           version: PATH
+
+  matrix:
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - task: benchmark
+            runs-on: ubuntu-22.04
+            python-version: "3.12"
+            pixi-environment: null
+            pre-install: "numpy>=1.23,<2.0.0"
+            install-extras: ".[codspeed]"
+            run-command: null
+            codspeed-run: "pytest . --codspeed"
+            codspeed-mode: walltime
+            locales: null
+          - task: docbuild
+            runs-on: ubuntu-latest
+            python-version: null
+            pixi-environment: docs
+            pre-install: null
+            install-extras: null
+            run-command: pixi run --environment docs docbuild
+            codspeed-run: null
+            codspeed-mode: null
+            locales: null
+          - task: doctest
+            runs-on: ubuntu-latest
+            python-version: null
+            pixi-environment: docs
+            pre-install: null
+            install-extras: null
+            run-command: pixi run --environment docs doctest
+            codspeed-run: null
+            codspeed-mode: null
+            locales: fr_FR
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup Python
+        if: ${{ matrix.python-version != null }}
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup pixi
+        if: ${{ matrix.pixi-environment != null }}
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          environments: ${{ matrix.pixi-environment }}
+
+      - name: Install pre-requisites
+        if: ${{ matrix.pre-install != null }}
+        run: pip install "${{ matrix.pre-install }}"
+
+      - name: Install task extras
+        if: ${{ matrix.install-extras != null }}
+        run: pip install ${{ matrix.install-extras }}
+
+      - name: Install locales
+        if: ${{ matrix.locales != null }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install language-pack-${{ matrix.locales }}
+          sudo localedef -i ${{ matrix.locales }} -f UTF-8 ${{ matrix.locales }}
+
+      - name: Run task
+        if: ${{ matrix.run-command != null }}
+        run: ${{ matrix.run-command }}
+
+      - name: Run benchmarks (CodSpeed)
+        if: ${{ matrix.codspeed-run != null }}
+        uses: CodSpeedHQ/action@v4.11.1
+        with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          run: ${{ matrix.codspeed-run }}
+          mode: ${{ matrix.codspeed-mode }}
 
   test-linux:
     runs-on: ubuntu-latest
@@ -143,7 +227,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/pint
     permissions:
-      id-token: write  # for trusted publishing to PyPI
+      id-token: write
 
     steps:
       - uses: actions/checkout@v6.0.2
