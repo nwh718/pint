@@ -1,40 +1,136 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 000d633..615bda5 100644
---- a/.github/workflows/ci.yml
-+++ b/.github/workflows/ci.yml
-@@ -20,10 +20,7 @@ jobs:
-         with:
-           environments: typecheck
-           activate-environment: true
--      - uses: jakebailey/pyright-action@v2
--        continue-on-error: true
--        with:
--          version: PATH
-+      - run: pixi run --environment typecheck typecheck
+-index 000d633..615bda5 100644
+---- a/.github/workflows/ci.yml
+-+++ b/.github/workflows/ci.yml
+-@@ -20,10 +20,7 @@ jobs:
+-         with:
+-           environments: typecheck
+-           activate-environment: true
+--      - uses: jakebailey/pyright-action@v2
+--        continue-on-error: true
+--        with:
+--          version: PATH
+-+      - run: pixi run --environment typecheck typecheck
+- 
+-   test-linux:
+-     runs-on: ubuntu-latest
+-diff --git a/pyproject.toml b/pyproject.toml
+-index 42fd0f2..447d5eb 100644
+---- a/pyproject.toml
+-+++ b/pyproject.toml
+-@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
+- build = { features = ["build"], no-default-feature = true }
+- test = { features = ["test"], solve-group = "default" }
+- test-all = { features = ["test-all"], solve-group = "default" }
+--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
+- numpy = { features = ["numpy"], solve-group = "default" }
+- codspeed = { features = ["codspeed"], solve-group = "default" }
+- docs = { features = [
+-@@ -221,8 +221,8 @@ python = "3.14.*"
+- [tool.pyright]
+- include = ["pint"]
+- exclude = ["pint/testsuite"]
+--pythonVersion = "3.12"
+--typeCheckingMode = "basic"
+-+strict = ["src/units/core.py"]
+-+pythonVersion = "3.13"
+- 
+- [tool.pyright.defineConstant]
+- HAS_BABEL = true
+diff --git a/pint/__init__.py b/pint/__init__.py
+index a954828..bd51385 100644
+--- a/pint/__init__.py
++++ b/pint/__init__.py
+@@ -13,22 +13,19 @@ and conversions from and to different units.
  
-   test-linux:
-     runs-on: ubuntu-latest
-diff --git a/pyproject.toml b/pyproject.toml
-index 42fd0f2..447d5eb 100644
---- a/pyproject.toml
-+++ b/pyproject.toml
-@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
- build = { features = ["build"], no-default-feature = true }
- test = { features = ["test"], solve-group = "default" }
- test-all = { features = ["test-all"], solve-group = "default" }
--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
- numpy = { features = ["numpy"], solve-group = "default" }
- codspeed = { features = ["codspeed"], solve-group = "default" }
- docs = { features = [
-@@ -221,8 +221,8 @@ python = "3.14.*"
- [tool.pyright]
- include = ["pint"]
- exclude = ["pint/testsuite"]
--pythonVersion = "3.12"
--typeCheckingMode = "basic"
-+strict = ["src/units/core.py"]
-+pythonVersion = "3.13"
+ from __future__ import annotations
  
- [tool.pyright.defineConstant]
- HAS_BABEL = true
+-from importlib.metadata import version
+-
+-from .delegates.formatter._format_helpers import formatter
+-from .errors import (  # noqa: F401
+-    DefinitionSyntaxError,
+-    DimensionalityError,
+-    LogarithmicUnitCalculusError,
+-    OffsetUnitCalculusError,
+-    PintError,
+-    RedefinitionError,
+-    UndefinedUnitError,
+-    UnitStrippedWarning,
+-)
+-from .formatting import register_unit_format
+-from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
+-from .util import logger, pi_theorem  # noqa: F401
++import sys
++
++_MINIMUM_PYTHON_VERSION = (3, 12)
++_SUPPORTED_PYTHON_VERSIONS = ((3, 12), (3, 13), (3, 14))
++
++if sys.version_info[:2] < _MINIMUM_PYTHON_VERSION:
++    from pint.errors import PythonVersionError
++
++    raise PythonVersionError(
++        current=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
++        required=f">={_MINIMUM_PYTHON_VERSION[0]}.{_MINIMUM_PYTHON_VERSION[1]}",
++    )
++
+ 
+ # Default Quantity, Unit and Measurement are the ones
+ # build in the default registry.
+@@ -125,8 +122,8 @@ __all__ = (
+     "Measurement",
+     "Quantity",
+     "Unit",
+-    "UnitRegistry",
+     "PintError",
++    "PythonVersionError",
+     "DefinitionSyntaxError",
+     "LogarithmicUnitCalculusError",
+     "DimensionalityError",
+diff --git a/pint/errors.py b/pint/errors.py
+index d150e30..d4137db 100644
+--- a/pint/errors.py
++++ b/pint/errors.py
+@@ -86,25 +86,29 @@ class WithDefErr:
+ class PintError(Exception):
+     """Base exception for all Pint errors."""
+ 
++    def __reduce__(self):
++        return self.__class__, (self.name, self.definition_type, self.msg)
+ 
+-class DefinitionError(ValueError, PintError):
+-    """Raised when a definition is not properly constructed."""
+ 
+-    name: str
+-    definition_type: type
+-    msg: str
++class PythonVersionError(RuntimeError, PintError):
++    """Raised when the running Python version is not supported."""
+ 
+-    def __init__(self, name: str, definition_type: type, msg: str):
+-        self.name = name
+-        self.definition_type = definition_type
+-        self.msg = msg
++    current: str
++    required: str
++
++    def __init__(self, current: str, required: str) -> None:
++        self.current = current
++        self.required = required
+ 
+     def __str__(self):
+-        msg = f"Cannot define '{self.name}' ({self.definition_type}): {self.msg}"
+-        return msg
++        return (
++            f"Pint requires Python {self.required}, "
++            f"but you are running Python {self.current}. "
++            f"Please upgrade your Python version."
++        )
+ 
+     def __reduce__(self):
+-        return self.__class__, (self.name, self.definition_type, self.msg)
++        return self.__class__, (self.current, self.required)
+ 
+ 
+ class DefinitionSyntaxError(ValueError, PintError):

@@ -13,22 +13,19 @@ and conversions from and to different units.
 
 from __future__ import annotations
 
-from importlib.metadata import version
+import sys
 
-from .delegates.formatter._format_helpers import formatter
-from .errors import (  # noqa: F401
-    DefinitionSyntaxError,
-    DimensionalityError,
-    LogarithmicUnitCalculusError,
-    OffsetUnitCalculusError,
-    PintError,
-    RedefinitionError,
-    UndefinedUnitError,
-    UnitStrippedWarning,
-)
-from .formatting import register_unit_format
-from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
-from .util import logger, pi_theorem  # noqa: F401
+_MINIMUM_PYTHON_VERSION = (3, 12)
+_SUPPORTED_PYTHON_VERSIONS = ((3, 12), (3, 13), (3, 14))
+
+if sys.version_info[:2] < _MINIMUM_PYTHON_VERSION:
+    from pint.errors import PythonVersionError
+
+    raise PythonVersionError(
+        current=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        required=f">={_MINIMUM_PYTHON_VERSION[0]}.{_MINIMUM_PYTHON_VERSION[1]}",
+    )
+
 
 # Default Quantity, Unit and Measurement are the ones
 # build in the default registry.
@@ -125,8 +122,8 @@ __all__ = (
     "Measurement",
     "Quantity",
     "Unit",
-    "UnitRegistry",
     "PintError",
+    "PythonVersionError",
     "DefinitionSyntaxError",
     "LogarithmicUnitCalculusError",
     "DimensionalityError",

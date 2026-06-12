@@ -86,25 +86,29 @@ class WithDefErr:
 class PintError(Exception):
     """Base exception for all Pint errors."""
 
-
-class DefinitionError(ValueError, PintError):
-    """Raised when a definition is not properly constructed."""
-
-    name: str
-    definition_type: type
-    msg: str
-
-    def __init__(self, name: str, definition_type: type, msg: str):
-        self.name = name
-        self.definition_type = definition_type
-        self.msg = msg
-
-    def __str__(self):
-        msg = f"Cannot define '{self.name}' ({self.definition_type}): {self.msg}"
-        return msg
-
     def __reduce__(self):
         return self.__class__, (self.name, self.definition_type, self.msg)
+
+
+class PythonVersionError(RuntimeError, PintError):
+    """Raised when the running Python version is not supported."""
+
+    current: str
+    required: str
+
+    def __init__(self, current: str, required: str) -> None:
+        self.current = current
+        self.required = required
+
+    def __str__(self):
+        return (
+            f"Pint requires Python {self.required}, "
+            f"but you are running Python {self.current}. "
+            f"Please upgrade your Python version."
+        )
+
+    def __reduce__(self):
+        return self.__class__, (self.current, self.required)
 
 
 class DefinitionSyntaxError(ValueError, PintError):
