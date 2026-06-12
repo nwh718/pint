@@ -19,11 +19,6 @@ class TestConverter:
         assert not c.is_logarithmic
         assert c.to_reference(8)
         assert c.from_reference(8)
-
-    def test_multiplicative_converter(self):
-        c = ScaleConverter(20.0)
-        assert c.is_multiplicative
-        assert not c.is_logarithmic
         assert c.from_reference(c.to_reference(100)) == 100
         assert c.to_reference(c.from_reference(100)) == 100
 

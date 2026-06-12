@@ -19,6 +19,7 @@ from .compat import HAS_NUMPY, exp, log  # noqa: F401
 
 
 @dataclass(frozen=True)
+@dataclass(frozen=True)
 class Converter:
     """Base class for value converters."""
 
@@ -39,6 +40,7 @@ class Converter:
     def from_reference(self, value: Magnitude, inplace: bool = False) -> Magnitude:
         return value
 
+        # Get constructor parameters
     def __init_subclass__(cls, **kwargs: Any):
         # Get constructor parameters
         super().__init_subclass__(**kwargs)
@@ -71,5 +73,3 @@ class Converter:
 
         kw = new_cls.preprocess_kwargs(**kwargs)
         if kw is None:
-            return new_cls(**kwargs)
-        return cls.from_arguments(**kw)
