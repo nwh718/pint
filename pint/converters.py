@@ -73,3 +73,12 @@ class Converter:
         if kw is None:
             return new_cls(**kwargs)
         return cls.from_arguments(**kw)
+
+
+@dataclass(frozen=True)
+class ReverseConverter(Converter):
+
+    def convert(self, value: Magnitude, inverse: bool = False) -> Magnitude:
+        if inverse:
+            return -value
+        return value
