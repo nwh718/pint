@@ -1,52 +1,83 @@
 diff --git a/pint/registry.py b/pint/registry.py
-index 175836d..424a4d9 100644
---- a/pint/registry.py
-+++ b/pint/registry.py
-@@ -14,7 +14,7 @@ need.
+-index 175836d..424a4d9 100644
+---- a/pint/registry.py
+-+++ b/pint/registry.py
+-@@ -14,7 +14,7 @@ need.
+- 
+- from __future__ import annotations
+- 
+--from typing import TYPE_CHECKING
+-+from typing import TYPE_CHECKING, Optional
+- 
+- from . import facets, registry_helpers
+- from .compat import TypeAlias
+-@@ -151,6 +151,38 @@ class UnitRegistry[MagnitudeT: Magnitude](
+-             cache_folder=cache_folder,
+-         )
+- 
+-+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
+-+        """Find a unit object by its alias (case-insensitive).
+-+
+-+        For example, 'kg' maps to the 'kilogram' unit. The search iterates
+-+        over all registered units and matches against each unit's set of
+-+        aliases. Matching is performed on lowercase strings so that lookups
+-+        like 'KG' still resolve to 'kilogram'.
+-+
+-+        Parameters
+-+        ----------
+-+        alias :
+-+            The alias string to look up (e.g. 'kg', 'Hz').
+-+
+-+        Returns
+-+        -------
+-+        Optional[Unit]
+-+            The :class:`Unit` associated with the alias if found, otherwise
+-+            ``None``. A warning is logged when no match is found.
+-+        """
+-+        normalized = alias.lower()
+-+        for canonical_name in self._units:
+-+            unit_obj = self.Unit(canonical_name)
+-+            unit_aliases = getattr(unit_obj, "_aliases", None) or ()
+-+            for a in unit_aliases:
+-+                if a.lower() == normalized:
+-+                    return unit_obj
+-+            if canonical_name.lower() == normalized:
+-+                return unit_obj
+-+
+-+        logger.warning("No unit found with alias: %r", alias)
+-+        return None
+-+
+-     def pi_theorem(self, quantities):
+-         """Builds dimensionless quantities using the Buckingham π theorem
+- 
+diff --git a/pint/converters.py b/pint/converters.py
+index 86bca1f..9f96e77 100644
+--- a/pint/converters.py
++++ b/pint/converters.py
+@@ -5,7 +5,7 @@ pint.converters
+ Functions and classes related to unit conversions.
+ 
+ :copyright: 2016 by Pint Authors, see AUTHORS for more details.
+-:license: BSD, see LICENSE for more details.
++:license: BSD 3-clause, see LICENSE for more details.
+ """
  
  from __future__ import annotations
- 
--from typing import TYPE_CHECKING
-+from typing import TYPE_CHECKING, Optional
- 
- from . import facets, registry_helpers
- from .compat import TypeAlias
-@@ -151,6 +151,38 @@ class UnitRegistry[MagnitudeT: Magnitude](
-             cache_folder=cache_folder,
-         )
- 
-+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
-+        """Find a unit object by its alias (case-insensitive).
+@@ -73,3 +73,17 @@ class Converter:
+         if kw is None:
+             return new_cls(**kwargs)
+         return cls.from_arguments(**kw)
 +
-+        For example, 'kg' maps to the 'kilogram' unit. The search iterates
-+        over all registered units and matches against each unit's set of
-+        aliases. Matching is performed on lowercase strings so that lookups
-+        like 'KG' still resolve to 'kilogram'.
 +
-+        Parameters
-+        ----------
-+        alias :
-+            The alias string to look up (e.g. 'kg', 'Hz').
++@dataclass(frozen=True)
++class ReverseConverter(Converter):
++    """A converter that negates values when ``inverse=True``.
 +
-+        Returns
-+        -------
-+        Optional[Unit]
-+            The :class:`Unit` associated with the alias if found, otherwise
-+            ``None``. A warning is logged when no match is found.
-+        """
-+        normalized = alias.lower()
-+        for canonical_name in self._units:
-+            unit_obj = self.Unit(canonical_name)
-+            unit_aliases = getattr(unit_obj, "_aliases", None) or ()
-+            for a in unit_aliases:
-+                if a.lower() == normalized:
-+                    return unit_obj
-+            if canonical_name.lower() == normalized:
-+                return unit_obj
++    When ``inverse=False`` (the default) the value is returned unchanged;
++    when ``inverse=True`` the additive inverse (i.e. ``-value``) is returned.
++    """
 +
-+        logger.warning("No unit found with alias: %r", alias)
-+        return None
-+
-     def pi_theorem(self, quantities):
-         """Builds dimensionless quantities using the Buckingham π theorem
- 
++    def convert(self, value: Magnitude, inverse: bool = False) -> Magnitude:
++        if inverse:
++            return -value
++        return value

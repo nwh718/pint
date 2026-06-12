@@ -5,7 +5,7 @@ pint.converters
 Functions and classes related to unit conversions.
 
 :copyright: 2016 by Pint Authors, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
+:license: BSD 3-clause, see LICENSE for more details.
 """
 
 from __future__ import annotations
@@ -73,3 +73,17 @@ class Converter:
         if kw is None:
             return new_cls(**kwargs)
         return cls.from_arguments(**kw)
+
+
+@dataclass(frozen=True)
+class ReverseConverter(Converter):
+    """A converter that negates values when ``inverse=True``.
+
+    When ``inverse=False`` (the default) the value is returned unchanged;
+    when ``inverse=True`` the additive inverse (i.e. ``-value``) is returned.
+    """
+
+    def convert(self, value: Magnitude, inverse: bool = False) -> Magnitude:
+        if inverse:
+            return -value
+        return value
