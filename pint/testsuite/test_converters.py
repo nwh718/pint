@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 
 from pint.compat import np
-from pint.converters import Converter
+from pint.converters import Converter, ReverseConverter
 from pint.facets.nonmultiplicative.definitions import (
     LogarithmicConverter,
     OffsetConverter,
@@ -19,6 +19,11 @@ class TestConverter:
         assert not c.is_logarithmic
         assert c.to_reference(8)
         assert c.from_reference(8)
+
+    def test_reverse_converter(self):
+        c = ReverseConverter()
+        assert c.convert(8) == 8
+        assert c.convert(8, inverse=True) == -8
 
     def test_multiplicative_converter(self):
         c = ScaleConverter(20.0)

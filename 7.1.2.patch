@@ -1,71 +1,128 @@
 diff --git a/pint/registry.py b/pint/registry.py
-index 175836d..062dfc1 100644
---- a/pint/registry.py
-+++ b/pint/registry.py
-@@ -14,7 +14,7 @@ need.
+-index 175836d..062dfc1 100644
+---- a/pint/registry.py
+-+++ b/pint/registry.py
+-@@ -14,7 +14,7 @@ need.
+- 
+- from __future__ import annotations
+- 
+--from typing import TYPE_CHECKING
+-+from typing import TYPE_CHECKING, Optional
+- 
+- from . import facets, registry_helpers
+- from .compat import TypeAlias
+-@@ -151,37 +151,26 @@ class UnitRegistry[MagnitudeT: Magnitude](
+-             cache_folder=cache_folder,
+-         )
+- 
+--    def pi_theorem(self, quantities):
+--        """Builds dimensionless quantities using the Buckingham π theorem
+--
+--        Parameters
+--        ----------
+--        quantities : dict
+--            mapping between variable name and units
+--
+--        Returns
+--        -------
+--        list
+--            a list of dimensionless quantities expressed as dicts
+--
+--        """
+--        return pi_theorem(quantities, self)
+--
+--    def setup_matplotlib(self, enable: bool = True) -> None:
+--        """Set up handlers for matplotlib's unit support.
+--
+--        Parameters
+--        ----------
+--        enable : bool
+--            whether support should be enabled or disabled (Default value = True)
+--
+--        """
+--        # Delays importing matplotlib until it's actually requested
+--        from .matplotlib import setup_matplotlib_handlers
+--
+--        setup_matplotlib_handlers(self, enable)
+--
+--    wraps = registry_helpers.wraps
+-+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
+-+        normalized_alias = alias.casefold()
+-+
+-+        for unit_name, unit_definition in self._units.items():
+-+            aliases = getattr(unit_definition, "_aliases", None)
+-+            if aliases is None:
+-+                aliases = tuple(
+-+                    candidate
+-+                    for candidate in (
+-+                        getattr(unit_definition, "symbol", None),
+-+                        *getattr(unit_definition, "aliases", ()),
+-+                    )
+-+                    if candidate
+-+                )
+-+
+-+            if any(candidate.casefold() == normalized_alias for candidate in aliases):
+-+                return self.Unit(unit_definition.name or unit_name)
+-+
+-+        logger.warning("Unit alias %r was not found in the registry.", alias)
+-+        return None
+- 
+-     check = registry_helpers.check
+- 
+diff --git a/pint/converters.py b/pint/converters.py
+index 86bca1f..038e263 100644
+--- a/pint/converters.py
++++ b/pint/converters.py
+@@ -18,7 +18,6 @@ from ._typing import Magnitude
+ from .compat import HAS_NUMPY, exp, log  # noqa: F401
  
- from __future__ import annotations
  
--from typing import TYPE_CHECKING
-+from typing import TYPE_CHECKING, Optional
+-@dataclass(frozen=True)
+ class Converter:
+     """Base class for value converters."""
  
- from . import facets, registry_helpers
- from .compat import TypeAlias
-@@ -151,37 +151,26 @@ class UnitRegistry[MagnitudeT: Magnitude](
-             cache_folder=cache_folder,
-         )
+@@ -40,7 +39,6 @@ class Converter:
+         return value
  
--    def pi_theorem(self, quantities):
--        """Builds dimensionless quantities using the Buckingham π theorem
--
--        Parameters
--        ----------
--        quantities : dict
--            mapping between variable name and units
--
--        Returns
--        -------
--        list
--            a list of dimensionless quantities expressed as dicts
--
--        """
--        return pi_theorem(quantities, self)
--
--    def setup_matplotlib(self, enable: bool = True) -> None:
--        """Set up handlers for matplotlib's unit support.
--
--        Parameters
--        ----------
--        enable : bool
--            whether support should be enabled or disabled (Default value = True)
--
--        """
--        # Delays importing matplotlib until it's actually requested
--        from .matplotlib import setup_matplotlib_handlers
--
--        setup_matplotlib_handlers(self, enable)
--
--    wraps = registry_helpers.wraps
-+    def get_unit_by_alias(self, alias: str) -> Optional[Unit]:
-+        normalized_alias = alias.casefold()
+     def __init_subclass__(cls, **kwargs: Any):
+-        # Get constructor parameters
+         super().__init_subclass__(**kwargs)
+         cls._subclasses.append(cls)
+ 
+@@ -73,3 +71,11 @@ class Converter:
+         if kw is None:
+             return new_cls(**kwargs)
+         return cls.from_arguments(**kw)
 +
-+        for unit_name, unit_definition in self._units.items():
-+            aliases = getattr(unit_definition, "_aliases", None)
-+            if aliases is None:
-+                aliases = tuple(
-+                    candidate
-+                    for candidate in (
-+                        getattr(unit_definition, "symbol", None),
-+                        *getattr(unit_definition, "aliases", ()),
-+                    )
-+                    if candidate
-+                )
 +
-+            if any(candidate.casefold() == normalized_alias for candidate in aliases):
-+                return self.Unit(unit_definition.name or unit_name)
++@dataclass(frozen=True)
++class ReverseConverter(Converter):
++    def convert(self, value: Magnitude, inverse: bool = False) -> Magnitude:
++        if inverse:
++            return -value
++        return value
+diff --git a/pint/testsuite/test_converters.py b/pint/testsuite/test_converters.py
+index 40346c7..ec0d12b 100644
+--- a/pint/testsuite/test_converters.py
++++ b/pint/testsuite/test_converters.py
+@@ -3,7 +3,7 @@ from __future__ import annotations
+ import itertools
+ 
+ from pint.compat import np
+-from pint.converters import Converter
++from pint.converters import Converter, ReverseConverter
+ from pint.facets.nonmultiplicative.definitions import (
+     LogarithmicConverter,
+     OffsetConverter,
+@@ -20,6 +20,11 @@ class TestConverter:
+         assert c.to_reference(8)
+         assert c.from_reference(8)
+ 
++    def test_reverse_converter(self):
++        c = ReverseConverter()
++        assert c.convert(8) == 8
++        assert c.convert(8, inverse=True) == -8
 +
-+        logger.warning("Unit alias %r was not found in the registry.", alias)
-+        return None
- 
-     check = registry_helpers.check
- 
+     def test_multiplicative_converter(self):
+         c = ScaleConverter(20.0)
+         assert c.is_multiplicative

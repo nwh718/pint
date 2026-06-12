@@ -18,7 +18,6 @@ from ._typing import Magnitude
 from .compat import HAS_NUMPY, exp, log  # noqa: F401
 
 
-@dataclass(frozen=True)
 class Converter:
     """Base class for value converters."""
 
@@ -40,7 +39,6 @@ class Converter:
         return value
 
     def __init_subclass__(cls, **kwargs: Any):
-        # Get constructor parameters
         super().__init_subclass__(**kwargs)
         cls._subclasses.append(cls)
 
@@ -73,3 +71,11 @@ class Converter:
         if kw is None:
             return new_cls(**kwargs)
         return cls.from_arguments(**kw)
+
+
+@dataclass(frozen=True)
+class ReverseConverter(Converter):
+    def convert(self, value: Magnitude, inverse: bool = False) -> Magnitude:
+        if inverse:
+            return -value
+        return value
