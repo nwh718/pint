@@ -21,12 +21,6 @@ jobs:
           environments: typecheck
           activate-environment: true
       - uses: jakebailey/pyright-action@v2
-        continue-on-error: true
-        with:
-          version: PATH
-        with:
-          version: PATH
-        with:
           version: PATH
         with:
           version: PATH
