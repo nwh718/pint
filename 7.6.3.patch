@@ -1,20 +1,21 @@
---- pyproject.toml
-+++ pyproject.toml
-@@ -128,7 +128,7 @@
- build = { features = ["build"], no-default-feature = true }
- test = { features = ["test"], solve-group = "default" }
- test-all = { features = ["test-all"], solve-group = "default" }
--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
-+typecheck = { features = ["typecheck", "test-all", "py312"], solve-group = "default" }
- numpy = { features = ["numpy"], solve-group = "default" }
- codspeed = { features = ["codspeed"], solve-group = "default" }
- docs = { features = [
-@@ -194,7 +194,7 @@
- bench = "pytest --benchmark-only"
- 
- [tool.pixi.feature.typecheck.dependencies]
--pyright = "*"
-+pyright = ">=1.1.350"
- pip = "*"
- 
- [tool.pixi.feature.typecheck.tasks]
+@@ -1,20 +0,0 @@
+---- pyproject.toml
+-+++ pyproject.toml
+-@@ -128,7 +128,7 @@
+- build = { features = ["build"], no-default-feature = true }
+- test = { features = ["test"], solve-group = "default" }
+- test-all = { features = ["test-all"], solve-group = "default" }
+--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+-+typecheck = { features = ["typecheck", "test-all", "py312"], solve-group = "default" }
+- numpy = { features = ["numpy"], solve-group = "default" }
+- codspeed = { features = ["codspeed"], solve-group = "default" }
+- docs = { features = [
+-@@ -194,7 +194,7 @@
+- bench = "pytest --benchmark-only"
+- 
+- [tool.pixi.feature.typecheck.dependencies]
+--pyright = "*"
+-+pyright = ">=1.1.350"
+- pip = "*"
+- 
+- [tool.pixi.feature.typecheck.tasks]
