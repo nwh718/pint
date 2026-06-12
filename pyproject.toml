@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
 build = { features = ["build"], no-default-feature = true }
 test = { features = ["test"], solve-group = "default" }
 test-all = { features = ["test-all"], solve-group = "default" }
-typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+typecheck = { features = ["typecheck", "test-all", "py314"], solve-group = "default" }
 numpy = { features = ["numpy"], solve-group = "default" }
 codspeed = { features = ["codspeed"], solve-group = "default" }
 docs = { features = [
@@ -221,7 +221,7 @@ python = "3.14.*"
 [tool.pyright]
 include = ["pint"]
 exclude = ["pint/testsuite"]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 typeCheckingMode = "basic"
 
 [tool.pyright.defineConstant]

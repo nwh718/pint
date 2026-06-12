@@ -21,6 +21,8 @@ jobs:
           environments: typecheck
           activate-environment: true
       - uses: jakebailey/pyright-action@v2
+        with:
+          python-version: "3.14"
         continue-on-error: true
 
   test-linux:
