@@ -4,12 +4,14 @@ import pickle
 
 import pytest
 
+import pint
 from pint import (
     DefinitionSyntaxError,
     DimensionalityError,
     LogarithmicUnitCalculusError,
     OffsetUnitCalculusError,
     PintError,
+    PythonVersionError,
     Quantity,
     RedefinitionError,
     UndefinedUnitError,
@@ -22,6 +24,26 @@ class TestErrors:
     def test_definition_syntax_error(self):
         ex = DefinitionSyntaxError("foo")
         assert str(ex) == "foo"
+
+    def test_python_version_error(self):
+        ex = PythonVersionError("foo")
+        assert str(ex) == "foo"
+
+        with pytest.raises(PintError):
+            raise ex
+
+        with pytest.raises(ImportError):
+            raise ex
+
+    def test_python_version_check_accepts_python_314(self):
+        pint._check_python_version((3, 14))
+
+    def test_python_version_check_rejects_python_311(self):
+        with pytest.raises(
+            PythonVersionError,
+            match=r"Pint no longer supports Python 3\.11.*3\.12, 3\.13, and 3\.14",
+        ):
+            pint._check_python_version((3, 11))
 
     def test_redefinition_error(self):
         ex = RedefinitionError("foo", "bar")
@@ -109,8 +131,6 @@ class TestErrors:
             raise ex
 
     def test_pickle_definition_syntax_error(self, subtests):
-        # OffsetUnitCalculusError raised from a custom ureg must be pickleable even if
-        # the ureg is not registered as the application ureg
         ureg = UnitRegistry(filename=None)
         ureg.define("foo = [bar]")
         ureg.define("bar = 2 foo")
@@ -120,6 +140,7 @@ class TestErrors:
         for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
             for ex in (
                 DefinitionSyntaxError("foo"),
+                PythonVersionError("foo"),
                 RedefinitionError("foo", "bar"),
                 UndefinedUnitError("meter"),
                 DimensionalityError("a", "b", "c", "d", extra_msg=": msg"),
@@ -133,13 +154,9 @@ class TestErrors:
                     with pytest.raises(UndefinedUnitError):
                         pickle.loads(pik)
 
-                    # assert False, ex.__reduce__()
                     ex2 = pickle.loads(pickle.dumps(ex, protocol))
-                    print(ex)
-                    print(ex2)
                     assert type(ex) is type(ex2)
                     assert ex == ex
-                    # assert ex.__dict__ == ex2.__dict__
                     assert str(ex) == str(ex2)
 
                     with pytest.raises(PintError):

@@ -70,7 +70,6 @@ def is_valid_dimension_name(name: str) -> bool:
     - empty dimension name or identifier.
     """
 
-    # TODO: shall we check also fro spaces?
     return name == "[]" or (
         len(name) > 1 and is_dim(name) and str.isidentifier(name[1:-1])
     )
@@ -110,6 +109,19 @@ class DefinitionError(ValueError, PintError):
 class DefinitionSyntaxError(ValueError, PintError):
     """Raised when a textual definition has a syntax error."""
 
+    msg: str
+
+    def __init__(self, msg: str):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
+    def __reduce__(self):
+        return self.__class__, (self.msg,)
+
+
+class PythonVersionError(ImportError, PintError):
     msg: str
 
     def __init__(self, msg: str):

@@ -1,55 +1,334 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 000d633..1aecb5a 100644
---- a/.github/workflows/ci.yml
-+++ b/.github/workflows/ci.yml
-@@ -20,15 +20,11 @@ jobs:
-         with:
-           environments: typecheck
-           activate-environment: true
--      - uses: jakebailey/pyright-action@v2
--        continue-on-error: true
--        with:
--          version: PATH
-+      - run: pixi run --environment typecheck typecheck
+-index 000d633..1aecb5a 100644
+---- a/.github/workflows/ci.yml
+-+++ b/.github/workflows/ci.yml
+-@@ -20,15 +20,11 @@ jobs:
+-         with:
+-           environments: typecheck
+-           activate-environment: true
+--      - uses: jakebailey/pyright-action@v2
+--        continue-on-error: true
+--        with:
+--          version: PATH
+-+      - run: pixi run --environment typecheck typecheck
+- 
+-   test-linux:
+-     runs-on: ubuntu-latest
+-     strategy:
+--      matrix:
+-         environment:
+-           - test-py312
+-           - test-py313
+-@@ -132,7 +128,7 @@ jobs:
+- 
+-   publish:
+-     if: github.ref_type == 'tag'
+--    needs: [test-linux, test-windows, test-macos, lint]
+-+    needs: [test-linux, test-windows, test-macos, lint, typecheck]
+- 
+-     runs-on: ubuntu-latest
+-     environment:
+-diff --git a/pyproject.toml b/pyproject.toml
+-index 42fd0f2..76e4c10 100644
+---- a/pyproject.toml
+-+++ b/pyproject.toml
+-@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
+- build = { features = ["build"], no-default-feature = true }
+- test = { features = ["test"], solve-group = "default" }
+- test-all = { features = ["test-all"], solve-group = "default" }
+--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
+-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
+- numpy = { features = ["numpy"], solve-group = "default" }
+- codspeed = { features = ["codspeed"], solve-group = "default" }
+- docs = { features = [
+-@@ -221,9 +221,9 @@ python = "3.14.*"
+- [tool.pyright]
+- include = ["pint"]
+- exclude = ["pint/testsuite"]
+--pythonVersion = "3.12"
+-+pythonVersion = "3.13"
+-+strict = ["src/units/core.py"]
+- typeCheckingMode = "basic"
+--
+- [tool.pyright.defineConstant]
+- HAS_BABEL = true
+- HAS_UNCERTAINTIES = true
+diff --git a/pint/__init__.py b/pint/__init__.py
+index a954828..66ed313 100644
+--- a/pint/__init__.py
++++ b/pint/__init__.py
+@@ -13,6 +13,7 @@ and conversions from and to different units.
  
-   test-linux:
-     runs-on: ubuntu-latest
-     strategy:
--      matrix:
-         environment:
-           - test-py312
-           - test-py313
-@@ -132,7 +128,7 @@ jobs:
+ from __future__ import annotations
  
-   publish:
-     if: github.ref_type == 'tag'
--    needs: [test-linux, test-windows, test-macos, lint]
-+    needs: [test-linux, test-windows, test-macos, lint, typecheck]
++import sys
+ from importlib.metadata import version
  
-     runs-on: ubuntu-latest
-     environment:
+ from .delegates.formatter._format_helpers import formatter
+@@ -22,6 +23,7 @@ from .errors import (  # noqa: F401
+     LogarithmicUnitCalculusError,
+     OffsetUnitCalculusError,
+     PintError,
++    PythonVersionError,
+     RedefinitionError,
+     UndefinedUnitError,
+     UnitStrippedWarning,
+@@ -30,6 +32,33 @@ from .formatting import register_unit_format
+ from .registry import ApplicationRegistry, LazyRegistry, UnitRegistry
+ from .util import logger, pi_theorem  # noqa: F401
+ 
++_SUPPORTED_PYTHON_VERSIONS = ((3, 12), (3, 13), (3, 14))
++_SUPPORTED_PYTHON_VERSION_TEXT = "3.12, 3.13, and 3.14"
++
++
++def _check_python_version(version_info: tuple[int, int] | None = None) -> None:
++    current = tuple(version_info if version_info is not None else sys.version_info[:2])
++
++    if current in _SUPPORTED_PYTHON_VERSIONS:
++        return
++
++    current_text = f"{current[0]}.{current[1]}"
++
++    if current < _SUPPORTED_PYTHON_VERSIONS[0]:
++        raise PythonVersionError(
++            f"Pint no longer supports Python {current_text}. "
++            f"Support for Python 3.11 and older has been dropped. "
++            f"Use Python {_SUPPORTED_PYTHON_VERSION_TEXT}."
++        )
++
++    raise PythonVersionError(
++        f"Pint does not yet support Python {current_text}. "
++        f"Use Python {_SUPPORTED_PYTHON_VERSION_TEXT}."
++    )
++
++
++_check_python_version()
++
+ # Default Quantity, Unit and Measurement are the ones
+ # build in the default registry.
+ Quantity = UnitRegistry.Quantity
+@@ -37,7 +66,6 @@ Unit = UnitRegistry.Unit
+ Measurement = UnitRegistry.Measurement
+ Context = UnitRegistry.Context
+ Group = UnitRegistry.Group
+-
+ try:  # pragma: no cover
+     __version__ = version("pint")
+ except Exception:  # pragma: no cover
+@@ -45,7 +73,6 @@ except Exception:  # pragma: no cover
+     # so the reported version will be unknown
+     __version__ = "unknown"
+ 
+-
+ #: A Registry with the default units and constants.
+ _DEFAULT_REGISTRY = LazyRegistry()
+ 
+@@ -55,6 +82,7 @@ application_registry = ApplicationRegistry(_DEFAULT_REGISTRY)
+ 
+ def _unpickle(cls, *args):
+     """Rebuild object upon unpickling.
++
+     All units must exist in the application registry.
+ 
+     Parameters
+@@ -70,9 +98,6 @@ def _unpickle(cls, *args):
+     from pint.util import UnitsContainer
+ 
+     for arg in args:
+-        # Prefixed units are defined within the registry
+-        # on parsing (which does not happen here).
+-        # We need to make sure that this happens before using.
+         if isinstance(arg, UnitsContainer):
+             for name in arg:
+                 application_registry.parse_units(name)
+@@ -80,21 +105,25 @@ def _unpickle(cls, *args):
+     return cls(*args)
+ 
+ 
++
+ def _unpickle_quantity(cls, *args):
+     """Rebuild quantity upon unpickling using the application registry."""
+     return _unpickle(application_registry.Quantity, *args)
+ 
+ 
++
+ def _unpickle_unit(cls, *args):
+     """Rebuild unit upon unpickling using the application registry."""
+     return _unpickle(application_registry.Unit, *args)
+ 
+ 
++
+ def _unpickle_measurement(cls, *args):
+     """Rebuild measurement upon unpickling using the application registry."""
+     return _unpickle(application_registry.Measurement, *args)
+ 
+ 
++
+ def set_application_registry(registry):
+     """Set the application registry, which is used for unpickling operations
+     and when invoking pint.Quantity or pint.Unit directly.
+@@ -106,6 +135,7 @@ def set_application_registry(registry):
+     application_registry.set(registry)
+ 
+ 
++
+ def get_application_registry():
+     """Return the application registry. If :func:`set_application_registry` was never
+     invoked, return a registry built using :file:`defaults_en.txt` embedded in the pint
+@@ -118,27 +148,26 @@ def get_application_registry():
+     return application_registry
+ 
+ 
+-# Enumerate all user-facing objects
+-# Hint to intersphinx that, when building objects.inv, these objects must be registered
+-# under the top-level module and not in their original submodules
+ __all__ = (
++    "ApplicationRegistry",
++    "Context",
+     "Measurement",
++    "PintError",
++    "PythonVersionError",
+     "Quantity",
++    "RedefinitionError",
++    "UndefinedUnitError",
+     "Unit",
+     "UnitRegistry",
+-    "PintError",
++    "UnitStrippedWarning",
+     "DefinitionSyntaxError",
+     "LogarithmicUnitCalculusError",
+     "DimensionalityError",
+     "OffsetUnitCalculusError",
+-    "RedefinitionError",
+-    "UndefinedUnitError",
+-    "UnitStrippedWarning",
+     "formatter",
+     "get_application_registry",
+     "set_application_registry",
+     "register_unit_format",
+     "pi_theorem",
+     "__version__",
+-    "Context",
+ )
+diff --git a/pint/errors.py b/pint/errors.py
+index d150e30..c0928d7 100644
+--- a/pint/errors.py
++++ b/pint/errors.py
+@@ -70,7 +70,6 @@ def is_valid_dimension_name(name: str) -> bool:
+     - empty dimension name or identifier.
+     """
+ 
+-    # TODO: shall we check also fro spaces?
+     return name == "[]" or (
+         len(name) > 1 and is_dim(name) and str.isidentifier(name[1:-1])
+     )
+@@ -122,6 +121,19 @@ class DefinitionSyntaxError(ValueError, PintError):
+         return self.__class__, (self.msg,)
+ 
+ 
++class PythonVersionError(ImportError, PintError):
++    msg: str
++
++    def __init__(self, msg: str):
++        self.msg = msg
++
++    def __str__(self):
++        return self.msg
++
++    def __reduce__(self):
++        return self.__class__, (self.msg,)
++
++
+ class RedefinitionError(ValueError, PintError):
+     """Raised when a unit or prefix is redefined."""
+ 
+diff --git a/pint/testsuite/test_errors.py b/pint/testsuite/test_errors.py
+index e0c4ec3..74e8338 100644
+--- a/pint/testsuite/test_errors.py
++++ b/pint/testsuite/test_errors.py
+@@ -4,12 +4,14 @@ import pickle
+ 
+ import pytest
+ 
++import pint
+ from pint import (
+     DefinitionSyntaxError,
+     DimensionalityError,
+     LogarithmicUnitCalculusError,
+     OffsetUnitCalculusError,
+     PintError,
++    PythonVersionError,
+     Quantity,
+     RedefinitionError,
+     UndefinedUnitError,
+@@ -23,6 +25,26 @@ class TestErrors:
+         ex = DefinitionSyntaxError("foo")
+         assert str(ex) == "foo"
+ 
++    def test_python_version_error(self):
++        ex = PythonVersionError("foo")
++        assert str(ex) == "foo"
++
++        with pytest.raises(PintError):
++            raise ex
++
++        with pytest.raises(ImportError):
++            raise ex
++
++    def test_python_version_check_accepts_python_314(self):
++        pint._check_python_version((3, 14))
++
++    def test_python_version_check_rejects_python_311(self):
++        with pytest.raises(
++            PythonVersionError,
++            match=r"Pint no longer supports Python 3\.11.*3\.12, 3\.13, and 3\.14",
++        ):
++            pint._check_python_version((3, 11))
++
+     def test_redefinition_error(self):
+         ex = RedefinitionError("foo", "bar")
+         assert str(ex) == "Cannot redefine 'foo' (bar)"
+@@ -109,8 +131,6 @@ class TestErrors:
+             raise ex
+ 
+     def test_pickle_definition_syntax_error(self, subtests):
+-        # OffsetUnitCalculusError raised from a custom ureg must be pickleable even if
+-        # the ureg is not registered as the application ureg
+         ureg = UnitRegistry(filename=None)
+         ureg.define("foo = [bar]")
+         ureg.define("bar = 2 foo")
+@@ -120,6 +140,7 @@ class TestErrors:
+         for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
+             for ex in (
+                 DefinitionSyntaxError("foo"),
++                PythonVersionError("foo"),
+                 RedefinitionError("foo", "bar"),
+                 UndefinedUnitError("meter"),
+                 DimensionalityError("a", "b", "c", "d", extra_msg=": msg"),
+@@ -133,13 +154,9 @@ class TestErrors:
+                     with pytest.raises(UndefinedUnitError):
+                         pickle.loads(pik)
+ 
+-                    # assert False, ex.__reduce__()
+                     ex2 = pickle.loads(pickle.dumps(ex, protocol))
+-                    print(ex)
+-                    print(ex2)
+                     assert type(ex) is type(ex2)
+                     assert ex == ex
+-                    # assert ex.__dict__ == ex2.__dict__
+                     assert str(ex) == str(ex2)
+ 
+                     with pytest.raises(PintError):
 diff --git a/pyproject.toml b/pyproject.toml
-index 42fd0f2..76e4c10 100644
+index 76e4c10..bd8ff47 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -128,7 +128,7 @@ lint = { features = ["lint"], no-default-feature = true }
- build = { features = ["build"], no-default-feature = true }
- test = { features = ["test"], solve-group = "default" }
- test-all = { features = ["test-all"], solve-group = "default" }
--typecheck = { features = ["typecheck", "test-all"], solve-group = "default" }
-+typecheck = { features = ["typecheck", "test-all", "py313"], solve-group = "default" }
- numpy = { features = ["numpy"], solve-group = "default" }
- codspeed = { features = ["codspeed"], solve-group = "default" }
- docs = { features = [
-@@ -221,9 +221,9 @@ python = "3.14.*"
- [tool.pyright]
- include = ["pint"]
- exclude = ["pint/testsuite"]
--pythonVersion = "3.12"
-+pythonVersion = "3.13"
-+strict = ["src/units/core.py"]
- typeCheckingMode = "basic"
--
- [tool.pyright.defineConstant]
- HAS_BABEL = true
- HAS_UNCERTAINTIES = true
+@@ -24,7 +24,7 @@ classifiers = [
+   "Programming Language :: Python :: 3.13",
+   "Programming Language :: Python :: 3.14",
+ ]
+-requires-python = ">=3.12"
++requires-python = ">=3.12,<3.15"
+ keywords = ["physical", "quantities", "unit", "conversion", "science"]
+ dependencies = [
+   "platformdirs>=2.1.0",
