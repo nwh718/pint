@@ -71,6 +71,7 @@ def is_valid_dimension_name(name: str) -> bool:
     """
 
     # TODO: shall we check also fro spaces?
+    # TODO: shall we check also fro spaces?
     return name == "[]" or (
         len(name) > 1 and is_dim(name) and str.isidentifier(name[1:-1])
     )
@@ -87,41 +88,9 @@ class PintError(Exception):
     """Base exception for all Pint errors."""
 
 
-class DefinitionError(ValueError, PintError):
-    """Raised when a definition is not properly constructed."""
-
-    name: str
-    definition_type: type
-    msg: str
-
-    def __init__(self, name: str, definition_type: type, msg: str):
-        self.name = name
-        self.definition_type = definition_type
-        self.msg = msg
-
-    def __str__(self):
-        msg = f"Cannot define '{self.name}' ({self.definition_type}): {self.msg}"
-        return msg
-
-    def __reduce__(self):
-        return self.__class__, (self.name, self.definition_type, self.msg)
-
-
-class DefinitionSyntaxError(ValueError, PintError):
-    """Raised when a textual definition has a syntax error."""
-
-    msg: str
-
-    def __init__(self, msg: str):
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-    def __reduce__(self):
-        return self.__class__, (self.msg,)
-
-
+class PythonVersionError(PintError):
+    """Raised when the Python version is not supported."""
+    
 class RedefinitionError(ValueError, PintError):
     """Raised when a unit or prefix is redefined."""
 

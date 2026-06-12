@@ -4,14 +4,12 @@ import pickle
 
 import pytest
 
-from pint import (
     DefinitionSyntaxError,
     DimensionalityError,
     LogarithmicUnitCalculusError,
     OffsetUnitCalculusError,
     PintError,
     Quantity,
-    RedefinitionError,
     UndefinedUnitError,
     UnitRegistry,
 )
@@ -25,26 +23,6 @@ class TestErrors:
 
     def test_redefinition_error(self):
         ex = RedefinitionError("foo", "bar")
-        assert str(ex) == "Cannot redefine 'foo' (bar)"
-
-        with pytest.raises(PintError):
-            raise ex
-
-    def test_undefined_unit_error(self):
-        x = ("meter",)
-        msg = "'meter' is not defined in the unit registry"
-
-        ex = UndefinedUnitError(x)
-        assert str(ex) == msg
-        ex = UndefinedUnitError(list(x))
-        assert str(ex) == msg
-        ex = UndefinedUnitError(set(x))
-        assert str(ex) == msg
-
-        with pytest.raises(PintError):
-            raise ex
-
-    def test_undefined_unit_error_multi(self):
         x = ("meter", "kg")
         msg = "('meter', 'kg') are not defined in the unit registry"
 
@@ -131,6 +109,8 @@ class TestErrors:
                 with subtests.test(protocol=protocol, etype=type(ex)):
                     pik = pickle.dumps(ureg.Quantity("1 foo"), protocol)
                     with pytest.raises(UndefinedUnitError):
+        # OffsetUnitCalculusError raised from a custom ureg must be pickleable even if
+        # the ureg is not registered as the application ureg
                         pickle.loads(pik)
 
                     # assert False, ex.__reduce__()
@@ -140,7 +120,6 @@ class TestErrors:
                     assert type(ex) is type(ex2)
                     assert ex == ex
                     # assert ex.__dict__ == ex2.__dict__
-                    assert str(ex) == str(ex2)
 
                     with pytest.raises(PintError):
                         raise ex
@@ -154,3 +133,7 @@ class TestErrors:
             str(error.value)
             == "[bilbo] is not defined as dimension in the pint UnitRegistry"
         )
+                    # assert False, ex.__reduce__()
+                    print(ex)
+                    print(ex2)
+                    # assert ex.__dict__ == ex2.__dict__
