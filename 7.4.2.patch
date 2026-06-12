@@ -1,31 +1,52 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 000d633..0ebb141 100644
+index 0ebb141..2b689fe 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -22,8 +22,6 @@ jobs:
+@@ -21,8 +21,9 @@ jobs:
+           environments: typecheck
            activate-environment: true
        - uses: jakebailey/pyright-action@v2
-         continue-on-error: true
--        with:
--          version: PATH
- 
+-        continue-on-error: true
+-
++        with:
++          version: PATH
++          python-version: "3.12"
    test-linux:
      runs-on: ubuntu-latest
-@@ -107,7 +105,7 @@ jobs:
-           log-level: vvv
-       - name: Install numpy
-         if: ${{ matrix.numpy != null }}
--        run: pip install "${{matrix.numpy}}"
-+        run: pixi run --environment ${{ matrix.environment }} pip install "${{matrix.numpy}}"
-       - run: pixi run --environment ${{ matrix.environment }} test
- 
-   test-macos:
-@@ -125,7 +123,7 @@ jobs:
-         with:
-           environments: ${{ matrix.environment }}
-           log-level: vvv
--      - name: Install numpy
-+        run: pip install "${{matrix.numpy}}"
-         if: ${{ matrix.numpy != null }}
-         run: pip install "${{matrix.numpy}}"
-       - run: pixi run --environment ${{ matrix.environment }} test
+     strategy:
+diff --git a/7.4.2.patch b/7.4.2.patch
+index d519f32..e69de29 100644
+--- a/7.4.2.patch
++++ b/7.4.2.patch
+@@ -1,31 +0,0 @@
+-diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+-index 000d633..0ebb141 100644
+---- a/.github/workflows/ci.yml
+-+++ b/.github/workflows/ci.yml
+-@@ -22,8 +22,6 @@ jobs:
+-           activate-environment: true
+-       - uses: jakebailey/pyright-action@v2
+-         continue-on-error: true
+--        with:
+--          version: PATH
+- 
+-   test-linux:
+-     runs-on: ubuntu-latest
+-@@ -107,7 +105,7 @@ jobs:
+-           log-level: vvv
+-       - name: Install numpy
+-         if: ${{ matrix.numpy != null }}
+--        run: pip install "${{matrix.numpy}}"
+-+        run: pixi run --environment ${{ matrix.environment }} pip install "${{matrix.numpy}}"
+-       - run: pixi run --environment ${{ matrix.environment }} test
+- 
+-   test-macos:
+-@@ -125,7 +123,7 @@ jobs:
+-         with:
+-           environments: ${{ matrix.environment }}
+-           log-level: vvv
+--      - name: Install numpy
+-+        run: pip install "${{matrix.numpy}}"
+-         if: ${{ matrix.numpy != null }}
+-         run: pip install "${{matrix.numpy}}"
+-       - run: pixi run --environment ${{ matrix.environment }} test
